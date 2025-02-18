@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Chat</title>
+    <style>
+        /* Add your CSS here */
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="username-container">
+            <input type="text" id="username-input" placeholder="Enter your name..." />
+            <button id="join-button">Join Chat</button>
+        </div>
+        <div id="online-users" style="display: none;">
+            <h3>Online Users:</h3>
+            <ul id="user-list"></ul>
+        </div>
+        <div class="chat-box" id="chat-box" style="display: none;"></div>
+        <input type="text" id="message-input" placeholder="Type your message..." />
+        <button id="send-button">Send</button>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script>
+        const socket = io('https://your-backend-url.onrender.com'); // Replace with your Render backend URL
+        let username = '';
+
+        // Join chat
+        document.getElementById('join-button').addEventListener('click', function() {
+            username = document.getElementById('username-input').value.trim();
+            if (username) {
+                document.getElementById('username-container').style.display = 'none';
+                document.getElementById('chat-box').style.display = 'block';
+                document.getElementById('online-users').style.display = 'block';
+                document.getElementById('message-input').style.display = 'inline-block';
+                document.getElementById('send-button').style.display = 'inline-block';
+
+                // Notify the server that a new user has joined
+                socket.emit('join', username);
+            } else {
+                alert('Please enter a valid name.');
+            }
+        });
+
+        // Send message
+        document.getElementById('send-button').addEventListener('click', function() {
+            const messageInput = document.getElementById('message-input');
+            const messageText = messageInput.value.trim();
+
+            if (messageText) {
+                // Send the message to the server
+                socket.emit('chat message', { username, message: messageText });
+                messageInput.value = '';
+            }
+        });
+
+        // Receive messages
+        socket.on('chat message', (data) => {
+            const chatBox = document.getElementById('chat-box');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', data.username === username ? 'user' : 'other');
+            messageElement.textContent = `${data.username}: ${data.message}`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // User joined
+        socket.on('user joined', (username) => {
+            const chatBox = document.getElementById('chat-box');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', 'system');
+            messageElement.textContent = `${username} joined the chat.`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // User left
+        socket.on('user left', (username) => {
+            const chatBox = document.getElementById('chat-box');
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message', 'system');
+            messageElement.textContent = `${username} left the chat.`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // Update online users list
+        socket.on('update users', (users) => {
+            const userList = document.getElementById('user-list');
+            userList.innerHTML = ''; // Clear the list
+            users.forEach((user) => {
+                const userItem = document.createElement('li');
+                userItem.textContent = user;
+                userList.appendChild(userItem);
+            });
+        });
+
+        // Send message on Enter key press
+        document.getElementById('message-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('send-button').click();
+            }
+        });
+    </script>
+</body>
+</html>
